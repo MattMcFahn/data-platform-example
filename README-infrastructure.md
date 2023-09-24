@@ -30,3 +30,9 @@ See [terraform docs](https://github.com/terraform-docs/terraform-docs) for more 
 <!-- BEGIN_SNOWFLAKE_DOCS -->
 
 <!-- END_SNOWFLAKE_DOCS -->
+
+### Lambda
+
+<!-- BEGIN_LAMBDA_DOCS -->
+
+<!-- END_LAMBDA_DOCS -->
