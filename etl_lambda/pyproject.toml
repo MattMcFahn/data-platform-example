@@ -1,0 +1,87 @@
+[tool.poetry]
+name = "etl-lambda"
+version = "0.1.0"
+description = "Python package to run inside an AWS lambda for ETL between databases"
+authors = ["Your Name <you@example.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "etl_lambda"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pydantic = "^2.3.0"
+python-json-logger = "^2.0.7"
+boto3 = "^1.28.53"
+python-dotenv = "^1.0.0"
+
+
+[tool.poetry.group.dev.dependencies]
+flake8 = "^6.1.0"
+black = "^23.9.1"
+pylint = "^2.17.5"
+mypy = "^1.5.1"
+pytest = "^7.4.2"
+pytest-cov = "^4.1.0"
+coverage = "^7.3.1"
+isort = "^5.12.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.coverage.paths]
+source = ["etl_lambda/", "*/site-packages/"]
+
+[tool.coverage.run]
+omit = [".*", "*/site-packages/*", "etl_lambda/__init__.py"]
+
+[tool.coverage.report]
+fail_under = 95
+exclude_lines = [
+    # Have to re-enable the standard pragma
+    "pragma: no cover",
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+    # Don't complain if non-runnable code isn't run:
+    "if 0:",
+    'if __name__ == "__main__":']
+
+[flake8]
+max-line-length = 120
+max-complexity = 18
+
+[tool.isort]
+line_length = 120
+multi_line_output=3
+include_trailing_comma = true
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.black]
+line-length = 120
+include = '\.pyi?$'
+disable=["E203", "W503"]
+
+[tool.pylint.format]
+max-line-length = 120
+
+[tool.pylint.MAIN]
+ignore-paths = [""]
+extension-pkg-whitelist="pydantic"
+
+[tool.pylint.basic]
+# https://pylint.pycqa.org/en/1.6.0/options.html
+variable-rgx = "[a-z_][a-z0-9_]{0,40}$"
+
+[tool.pylint.global]
+disable = ["fixme", "too-many-instance-attributes", "redefined-outer-name", "too-few-public-methods"]
+output-format = "colorized"
+
+
+[tool.pytest]
+env_files=[".test.env"]
+env=[
+    "rootdir=/tests"
+]
