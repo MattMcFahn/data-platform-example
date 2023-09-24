@@ -1,0 +1,2 @@
+# TODO: Localstack: https://hub.docker.com/r/localstack/localstack
+version: '3.9'

@@ -1,0 +1,130 @@
+name: "CI/CD tests and new release tag for main branch"
+on:
+  push:
+    # Trigger on push to main (happens on merge)
+    branches: main
+    paths_ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+      - '.gitignore'
+   # Trigger on pull-request to main
+  pull_request:
+    branches: main
+  # Allow a manual workflow dispatch
+  workflow_dispatch:
+
+env:
+  GITHUB_RUNNER: 1
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  build:
+    name: 'Run tests and linting checks'
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write
+      checks: write
+      issues: write
+
+    steps:
+      # Stage 1: Checkout repo, setup dependencies & docker compose environment for running other stages
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }} # checkout the correct branch name
+          fetch-depth: 0 # fetch the whole repo history
+
+      - name: Set up Python 3.11.4
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.11.4"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.2.2
+          virtualenvs-create: true
+          virtualenvs-in-project: false
+          virtualenvs-path: ~/.virtualenvs
+          installer-parallel: true
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v3
+        id: cache
+        with:
+          path: ~/.virtualenvs
+          key: cache-poetry-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            cache-poetry-${{ hashFiles('poetry.lock') }}
+
+      - name: Install Dependencies
+        run: poetry install
+        if: steps.cache.outputs.cache-hit != 'true'
+
+      - name: Make .env file
+        run: mv .test.env .env
+
+      # Pull the latest image to build
+      # (docker pull is faster than caching in most cases.)
+      - name: Retrieve docker pull only images
+        run: docker-compose pull
+
+      - name: Bring up docker compose environment for test purposes
+        run: docker-compose up --build -d
+
+    # Stage 2: Formatting/linting, tests, and coverage
+      - name: Run linting, formatting and tests
+        run: make checks
+
+      - name: Publish pytest coverage comment
+        uses: MishaKav/pytest-coverage-comment@main
+        with:
+          pytest-coverage-path: tests/test_results/pytest-coverage.txt
+          title: Data remediation unit & integration test results
+          badge-title: Coverage percentage
+          hide-badge: false
+          hide-report: false
+          create-new-comment: false
+          hide-comment: false
+          report-only-changed-files: false
+          junitxml-path: tests/test_results/report.xml
+          junitxml-title: Total coverage
+        if: github.event_name == 'pull_request'
+
+      - name: Publish Unit & Integration Test reports
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        if: always()
+        with:
+          files: "tests/test_results/report.xml"
+          check_name: "Unit & Integration Test results"
+          comment_title: "Unit & Integration Test results"
+
+
+      # Stage 3: SemVer and new git tag
+      - name: Configure Git
+        run: git config user.name "GitHub Actions Bot" && git config user.email "<>"
+        if: github.ref == 'refs/heads/main'
+
+      # Stamp Repo with semver tag if on Main
+      - name: GitTools
+        uses: gittools/actions/gitversion/setup@v0.9.13
+        with:
+          versionSpec: '5.x'
+        if: github.ref == 'refs/heads/main'
+
+      - name: Determine Version
+        uses: gittools/actions/gitversion/execute@v0.9.13
+        with:
+          useConfigFile: true
+        if: github.ref == 'refs/heads/main'
+
+      - name: Stamp Repo With Tag
+        run: git tag -a ${{ env.GitVersion_SemVer }} -m "${{ env.GitVersion_SemVer }}" && git push origin ${{ env.GitVersion_SemVer }}
+        if: github.ref == 'refs/heads/main'

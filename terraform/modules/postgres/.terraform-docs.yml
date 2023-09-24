@@ -1,0 +1,14 @@
+formatter: markdown table
+
+settings:
+  anchor: false
+  escape: false
+  indent: 4
+
+output:
+  file: ../../../README-infrastructure.md
+  mode: inject
+  template: |-
+    <!-- BEGIN_POSTGRES_DOCS -->
+    {{ .Content }}
+    <!-- END_POSTGRES_DOCS -->
